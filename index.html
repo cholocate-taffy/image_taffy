@@ -1,16 +1,939 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>上传照片</title>
+    <title>梦幻光影照片库 - 开放式照片墙</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #e9ecef;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Glassmorphism effect */
+        .glass {
+            background: rgba(21, 17, 56, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        /* Particle canvas */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        /* Neon text effect */
+        .neon-text {
+            text-shadow: 
+                0 0 5px rgba(255, 107, 107, 0.5),
+                0 0 10px rgba(255, 107, 107, 0.3),
+                0 0 15px rgba(255, 107, 107, 0.2);
+        }
+        
+        /* Search box glow */
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.7);
+        }
+        
+        /* Photo card styles */
+        .photo-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: perspective(800px) rotateY(0deg);
+            transform-style: preserve-3d;
+        }
+        
+        .photo-card:hover {
+            transform: translateY(-10px) scale(1.03) rotateY(-3deg);
+            box-shadow: 0 20px 30px rgba(0,0,0,0.4);
+        }
+        
+        .photo-overlay {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: linear-gradient(to top, rgba(15, 12, 41, 0.9), transparent);
+        }
+        
+        .photo-card:hover .photo-overlay {
+            opacity: 1;
+        }
+        
+        /* Animation classes */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .floating {
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        /* Hover effects */
+        .btn-hover:hover {
+            box-shadow: 0 0 15px currentColor;
+            transform: translateY(-2px);
+        }
+        
+        /* Tag cloud animation */
+        .tag-cloud span {
+            transition: all 0.3s ease;
+        }
+        
+        .tag-cloud span:hover {
+            transform: scale(1.15);
+            color: #ff6b6b;
+            cursor: pointer;
+        }
+        
+        /* Color wheel button */
+        .color-wheel {
+            transition: all 0.5s ease;
+            box-shadow: 
+                inset 0 0 5px rgba(255,255,255,0.2),
+                0 0 10px rgba(255,255,255,0.1);
+        }
+        
+        .color-wheel:hover {
+            box-shadow: 
+                inset 0 0 15px rgba(255,107,107,0.6),
+                0 0 20px rgba(78,205,196,0.8);
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 12, 41, 0.3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #ff6b6b, #4ecdc4);
+            border-radius: 8px;
+        }
+        
+        /* 上传区域统一风格 */
+        .upload-section {
+            background: linear-gradient(135deg, rgba(48, 43, 99, 0.7), rgba(21, 17, 56, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 
+                        inset 0 0 15px rgba(255, 107, 107, 0.2);
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.6);
+        }
+        
+        .upload-card {
+            background: rgba(30, 26, 71, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .upload-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border-color: rgba(78, 205, 196, 0.3);
+        }
+        
+        .tag-item {
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .tag-item:hover, .tag-item.active {
+            background: #ff6b6b;
+            color: white;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+        
+        .delete-btn {
+            background: rgba(255, 255, 255, 0.15);
+            transition: all 0.2s ease;
+        }
+        
+        .delete-btn:hover {
+            background: rgba(255, 107, 107, 0.8);
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+        
+        .custom-tag-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .custom-tag-input:focus {
+            outline: none;
+            border-color: #4ecdc4;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+        
+        .floating-icon {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: #ff6b6b;
+        }
+        
+        .tag-filter {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .tag-filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #e9ecef;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .tag-filter-btn:hover, .tag-filter-btn.active {
+            background: #ff6b6b;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+    </style>
 </head>
-<body>
-    <h1>上传你的光影作品</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="photo" accept="image/*" multiple>
-        <button type="submit">上传</button>
-    </form>
-    <p>上传完成后自动跳转到展示页</p>
+<body class="dark">
+    <!-- Particle background canvas -->
+    <canvas id="particle-canvas"></canvas>
+    
+    <!-- Main container -->
+    <div class="container mx-auto px-6 max-w-7xl pt-6 pb-12">
+        <!-- Top navigation -->
+        <header class="glass rounded-2xl p-4 flex justify-between items-center mb-8 sticky top-6 z-50">
+            <div class="flex items-center">
+                <!-- Logo with neon text effect -->
+                <iconify-icon icon="ph:camera" class="text-3xl mr-2 text-iceBlue"></iconify-icon>
+                <div class="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-neonPink to-iceBlue">
+                    GLOW GALLERY
+                </div>
+            </div>
+            
+            <!-- Navigation menu -->
+            <nav class="hidden md:block space-x-8">
+                <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300">首页</a>
+                <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300">精选</a>
+                <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300">动态</a>
+                <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300">艺术家</a>
+                <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300">关于</a>
+            </nav>
+            
+            <!-- User actions -->
+            <div class="flex items-center space-x-4">
+                <!-- Dark mode toggle -->
+                <button id="theme-toggle" class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors">
+                    <iconify-icon icon="ph:sun" class="text-xl text-yellow-400"></iconify-icon>
+                </button>
+                <!-- User avatar -->
+                <div class="bg-gray-700/80 rounded-full p-1 hover:ring-2 ring-iceBlue transition-all cursor-pointer">
+                    <img id="1" src="https://modao.cc/ai/uploads/ai_pics/2/26022/aigp_1752777859.jpeg" alt="User profile avatar" class="w-9 h-9 rounded-full">
+                </div>
+            </div>
+        </header>
+        
+        <main class="flex flex-col md:flex-row gap-8 z-10 relative">
+            <!-- Dynamic category sidebar -->
+            <aside class="glass md:sticky top-28 h-fit px-6 py-8 rounded-2xl hidden lg:block">
+                <h2 class="text-xl font-semibold mb-6 neon-text">类别筛选</h2>
+                
+                <div class="grid grid-cols-3 gap-5">
+                    <!-- Color wheel button -->
+                    <div class="color-wheel rounded-full p-1 flex items-center justify-center w-16 h-16 cursor-pointer" style="background: conic-gradient(#ff6b6b, #ffd166, #4ecdc4, #1a936f, #ff6b6b);">
+                        <iconify-icon icon="tabler:color-filter" class="text-white text-2xl bg-black/20 rounded-full p-1.5"></iconify-icon>
+                    </div>
+                    
+                    <!-- Category buttons -->
+                    <button class="glass p-3.5 rounded-full hover:ring-2 ring-neonPink transition-all">
+                        <iconify-icon icon="icon-park-outline:cosmic" class="text-2xl text-iceBlue"></iconify-icon>
+                    </button>
+                    <button class="glass p-3.5 rounded-full hover:ring-2 ring-iceBlue transition-all">
+                        <iconify-icon icon="ph:mountains" class="text-2xl text-white"></iconify-icon>
+                    </button>
+                    <button class="glass p-3.5 rounded-full hover:ring-2 ring-neonPink transition-all">
+                        <iconify-icon icon="ph:waves" class="text-2xl text-iceBlue"></iconify-icon>
+                    </button>
+                    <button class="glass p-3.5 rounded-full hover:ring-2 ring-iceBlue transition-all">
+                        <iconify-icon icon="mdi:city" class="text-2xl text-white"></iconify-icon>
+                    </button>
+                    <button class="glass p-3.5 rounded-full hover:ring-2 ring-neonPink transition-all">
+                        <iconify-icon icon="ri:rainbow-line" class="text-2xl text-iceBlue"></iconify-icon>
+                    </button>
+                </div>
+                
+                <!-- Pro tip -->
+                <div class="mt-10 p-4 rounded-xl bg-white/5 border border-white/10">
+                    <iconify-icon icon="carbon:idea" class="text-2xl text-iceBlue mb-2"></iconify-icon>
+                    <p class="text-sm">使用色轮按钮可更精准地筛选照片色调</p>
+                </div>
+            </aside>
+            
+            <!-- Main content area -->
+            <div class="flex-1">
+                <!-- Magic search section -->
+                <section class="glass rounded-2xl px-6 py-8 mb-8">
+                    <div class="text-center max-w-2xl mx-auto">
+                        <h1 class="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-neonPink to-iceBlue">
+                            Pixel Heart
+                        </h1>
+                        <p class="text-gray-300 mb-8">
+                            在这里发现奇幻的光影摄影作品，每张照片都讲述着一个独特的视觉故事
+                        </p>
+                        
+                        <!-- Search box -->
+                        <div class="relative">
+                            <input type="text" id="search-input" placeholder="搜索照片、标签或艺术家..." class="w-full bg-white/10 border border-white/20 rounded-2xl py-4 px-6 pr-16 focus:outline-none focus:ring-2 focus:ring-iceBlue focus:border-transparent transition-all duration-300 placeholder-gray-400">
+                            <button id="search-btn" class="absolute right-4 top-2.5 glass p-3 rounded-xl neon-glow bg-gradient-to-r from-neonPink to-iceBlue btn-hover">
+                                <iconify-icon icon="ic:baseline-search" class="text-xl text-white"></iconify-icon>
+                            </button>
+                        </div>
+                        
+                        <!-- 标签选择器 -->
+                        <div class="tag-filter mt-6">
+                            <button class="tag-filter-btn" data-tag="小猫">小猫</button>
+                            <button class="tag-filter-btn" data-tag="小狗">小狗</button>
+                            <button class="tag-filter-btn" data-tag="火烧云">火烧云</button>
+                            <button class="tag-filter-btn" data-tag="天空">天空</button>
+                            <button class="tag-filter-btn" data-tag="人像">人像</button>
+                            <button class="tag-filter-btn" data-tag="史迪奇">史迪奇</button>
+                            <button class="tag-filter-btn" data-tag="其他">其他</button>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 多图上传（统一风格） -->
+                <section class="upload-section rounded-2xl px-6 py-8 mb-12 relative overflow-hidden">
+                    <!-- 装饰元素 -->
+                    <div class="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-r from-neonPink/20 to-iceBlue/20 blur-3xl z-0"></div>
+                    <div class="absolute bottom-10 left-10 w-24 h-24 rounded-full bg-iceBlue/20 blur-2xl z-0"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex flex-col items-center mb-8">
+                            <iconify-icon icon="ph:cloud-arrow-up" class="text-5xl text-iceBlue mb-4 floating-icon"></iconify-icon>
+                            <h2 class="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-neonPink to-iceBlue">上传你的光影作品</h2>
+                            <p class="text-gray-300 text-center max-w-lg">一次最多可上传10张照片，为每张照片添加标签以便他人发现</p>
+                        </div>
+                        
+                        <div class="flex flex-col items-center mb-8">
+                            <label for="multi-upload" class="upload-btn cursor-pointer flex items-center justify-center px-8 py-4 rounded-xl mb-4 pulse">
+                                <iconify-icon icon="ph:plus" class="text-xl mr-2"></iconify-icon>
+                                <span>选择照片</span>
+                            </label>
+                            <input type="file" id="multi-upload" accept="image/*" multiple class="hidden">
+                            <p class="text-sm text-gray-400">支持 JPG, PNG 格式，每张不超过 5MB</p>
+                        </div>
+                        
+                        <!-- 上传预览区 -->
+                        <div id="upload-preview" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6"></div>
+                        
+                        <div class="text-center mt-8">
+                            <button id="submit-all" class="upload-btn px-8 py-4 rounded-xl font-medium flex items-center justify-center mx-auto">
+                                <iconify-icon icon="ph:paper-plane-tilt" class="text-xl mr-2"></iconify-icon>
+                                提交全部照片
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 模板 -->
+                    <template id="upload-template">
+                        <div class="upload-card p-5 rounded-2xl relative">
+                            <div class="relative mb-4 overflow-hidden rounded-xl">
+                                <img src="" class="w-full h-48 object-cover transition-transform duration-500">
+                                <button class="delete-btn absolute top-3 right-3 p-2 rounded-full">
+                                    <iconify-icon icon="ph:x" class="text-lg"></iconify-icon>
+                                </button>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h3 class="text-sm font-medium mb-2">添加标签:</h3>
+                                <div class="tag-box flex flex-wrap gap-2 text-sm">
+                                    <span data-value="小猫" class="tag-item py-1 px-3 rounded-full cursor-pointer">小猫</span>
+                                    <span data-value="小狗" class="tag-item py-1 px-3 rounded-full cursor-pointer">小狗</span>
+                                    <span data-value="火烧云" class="tag-item py-1 px-3 rounded-full cursor-pointer">火烧云</span>
+                                    <span data-value="天空" class="tag-item py-1 px-3 rounded-full cursor-pointer">天空</span>
+                                    <span data-value="人像" class="tag-item py-1 px-3 rounded-full cursor-pointer">人像</span>
+                                    <span data-value="史迪奇" class="tag-item py-1 px-3 rounded-full cursor-pointer">史迪奇</span>
+                                    <span data-value="其他" class="tag-item py-1 px-3 rounded-full cursor-pointer">其他</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="text-sm font-medium mb-2">自定义标签:</h3>
+                                <input type="text" placeholder="输入新标签（用逗号分隔）" class="custom-tag-input w-full p-2 rounded-lg text-sm">
+                            </div>
+                        </div>
+                    </template>
+                </section>
+                
+                <!-- Photo showcase section -->
+                <section class="mb-12">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold">照片墙</h2>
+                        <div class="flex space-x-3">
+                            <button id="sort-new" class="glass px-4 py-2 rounded-xl hover:bg-iceBlue/30 transition-colors">最新</button>
+                            <button id="sort-popular" class="glass px-4 py-2 rounded-xl hover:bg-neonPink/30 transition-colors">热门</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Photo grid - waterfall layout -->
+                    <div id="photo-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <!-- 照片卡片将通过JavaScript动态生成 -->
+                    </div>
+                    
+                    <div class="text-center mt-8">
+                        <button id="load-more" class="glass px-8 py-3.5 rounded-xl hover:bg-iceBlue/20 border border-white/10 btn-hover flex items-center mx-auto">
+                            <iconify-icon icon="ph:spinner" class="text-xl mr-2"></iconify-icon>
+                            加载更多照片
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Particle system script -->
+    <script>
+        // 照片数据库
+        let photoDatabase = JSON.parse(localStorage.getItem('photoDatabase')) || [];
+        
+        // 初始照片数据
+        const initialPhotos = [
+            {
+                id: 5,
+                url: "https://modao.cc/ai/uploads/ai_pics/2/26026/aigp_1752777872.jpeg",
+                title: "极光幻舞",
+                description: "北欧 · #极光 #星空",
+                tags: ["星空"],
+                likes: 42,
+                date: new Date('2024-05-15'),
+                category: "精选"
+            },
+            {
+                id: 6,
+                url: "https://modao.cc/ai/uploads/ai_pics/2/26027/aigp_1752777875.jpeg",
+                title: "赛博东京",
+                description: "日本 · #霓虹 #城市",
+                tags: ["其他"],
+                likes: 36,
+                date: new Date('2024-05-10'),
+                category: "精选"
+            },
+            {
+                id: 7,
+                url: "https://modao.cc/ai/uploads/ai_pics/2/26028/aigp_1752777876.jpeg",
+                title: "暮光使者",
+                description: "瑞士 · #山脉 #夕阳",
+                tags: ["火烧云", "天空"],
+                likes: 29,
+                date: new Date('2024-05-05'),
+                category: "精选"
+            },
+            {
+                id: 8,
+                url: "https://modao.cc/ai/uploads/ai_pics/2/26029/aigp_1752777878.jpeg",
+                title: "蓝海荧光",
+                description: "马尔代夫 · #海洋 #荧光",
+                tags: ["其他"],
+                likes: 51,
+                date: new Date('2024-04-28'),
+                category: "精选"
+            },
+            {
+                id: 9,
+                url: "https://modao.cc/ai/uploads/ai_pics/2/26030/aigp_1752777880.jpeg",
+                title: "镜面极光",
+                description: "挪威 · #极光 #湖面",
+                tags: ["天空"],
+                likes: 47,
+                date: new Date('2024-04-22'),
+                category: "精选"
+            },
+            {
+                id: 10,
+                url: "https://modao.cc/ai/uploads/ai_pics/2/26031/aigp_1752777882.jpeg",
+                title: "星河迢迢",
+                description: "撒哈拉 · #星空 #沙漠",
+                tags: ["星空"],
+                likes: 38,
+                date: new Date('2024-04-15'),
+                category: "精选"
+            },
+            {
+                id: 11,
+                url: "https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                title: "可爱小猫",
+                description: "家里 · #萌宠 #可爱",
+                tags: ["小猫"],
+                likes: 62,
+                date: new Date('2024-05-18'),
+                category: "宠物"
+            },
+            {
+                id: 12,
+                url: "https://images.unsplash.com/photo-1507146426996-ef05306b995a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                title: "快乐小狗",
+                description: "公园 · #萌宠 #快乐",
+                tags: ["小狗"],
+                likes: 58,
+                date: new Date('2024-05-16'),
+                category: "宠物"
+            },
+            {
+                id: 13,
+                url: "https://images.unsplash.com/photo-1500534623283-312aade485b6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                title: "火烧云",
+                description: "海边 · #日落 #美景",
+                tags: ["火烧云", "天空"],
+                likes: 45,
+                date: new Date('2024-05-12'),
+                category: "风景"
+            },
+            {
+                id: 14,
+                url: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                title: "美丽人像",
+                description: "摄影棚 · #人像 #写真",
+                tags: ["人像"],
+                likes: 41,
+                date: new Date('2024-05-08'),
+                category: "人像"
+            },
+            {
+                id: 15,
+                url: "https://images.unsplash.com/photo-1592194996308-7b43878e84b6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                title: "史迪奇玩偶",
+                description: "家里 · #玩具 #可爱",
+                tags: ["史迪奇"],
+                likes: 33,
+                date: new Date('2024-05-01'),
+                category: "其他"
+            },
+            {
+                id: 16,
+                url: "https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                title: "小猫玩耍",
+                description: "院子里 · #萌宠 #可爱",
+                tags: ["小猫"],
+                likes: 56,
+                date: new Date('2024-04-25'),
+                category: "宠物"
+            }
+        ];
+        
+        // 如果本地存储没有数据，则使用初始数据
+        if (photoDatabase.length === 0) {
+            photoDatabase = initialPhotos;
+            localStorage.setItem('photoDatabase', JSON.stringify(photoDatabase));
+        }
+        
+        // 当前显示的标签
+        let currentTag = null;
+        // 当前排序方式
+        let currentSort = 'new';
+        // 当前显示的图片数量
+        let visiblePhotos = 6;
+        
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            themeToggle.querySelector('iconify-icon').setAttribute(
+                'icon', 
+                document.documentElement.classList.contains('dark') ? 'ph:sun' : 'ph:moon'
+            );
+        });
+        
+        // Particle background initialization
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Particle class
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.2;
+                this.speedX = Math.random() * 1.5 - 0.75;
+                this.speedY = Math.random() * 1.5 - 0.75;
+                this.color = Math.random() > 0.5 ? `rgba(255, 107, 107, ${Math.random() * 0.5 + 0.2})` : `rgba(78, 205, 196, ${Math.random() * 0.5 + 0.2})`;
+                this.alpha = Math.random() * 0.5 + 0.1;
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                if (this.x < 0 || this.x > canvas.width) {
+                    this.speedX = -this.speedX;
+                }
+                if (this.y < 0 || this.y > canvas.height) {
+                    this.speedY = -this.speedY;
+                }
+            }
+            
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.alpha;
+                ctx.fill();
+            }
+        }
+        
+        // Create particles
+        const particles = [];
+        const particleCount = window.innerWidth / 3;
+        
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+        
+        // Mouse interaction
+        const mouse = {
+            x: null,
+            y: null,
+            radius: 100
+        };
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+        
+        // Animation loop
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                
+                // Mouse interaction effect
+                if (mouse.x && mouse.y) {
+                    const dx = mouse.x - particles[i].x;
+                    const dy = mouse.y - particles[i].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < mouse.radius) {
+                        const force = (mouse.radius - distance) / mouse.radius;
+                        particles[i].speedX += dx * 0.008 * force;
+                        particles[i].speedY += dy * 0.008 * force;
+                    }
+                }
+            }
+            
+            requestAnimationFrame(animateParticles);
+        }
+        
+        animateParticles();
+        
+        // Card hover effect enhancements
+        document.querySelectorAll('.photo-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.zIndex = '10';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.zIndex = '1';
+            });
+        });
+        
+        // 多图上传功能
+        document.getElementById("multi-upload").addEventListener("change", function () {
+            const files = Array.from(this.files);
+            const container = document.getElementById("upload-preview");
+            const template = document.getElementById("upload-template");
+            container.innerHTML = "";
+
+            // 限制最多10张
+            const validFiles = files.slice(0, 10);
+            
+            if (files.length > 10) {
+                alert("最多只能上传10张照片，已自动选择前10张");
+            }
+
+            validFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const clone = template.content.cloneNode(true);
+                    const img = clone.querySelector("img");
+                    img.src = e.target.result;
+
+                    // 标签选择
+                    clone.querySelectorAll(".tag-item").forEach(tag => {
+                        tag.addEventListener("click", () => {
+                            tag.classList.toggle("active");
+                        });
+                    });
+
+                    // 删除功能
+                    clone.querySelector(".delete-btn").addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        const card = event.target.closest('.upload-card');
+                        card.classList.add('opacity-0', 'scale-95');
+                        setTimeout(() => {
+                            card.remove();
+                        }, 300);
+                    });
+
+                    container.appendChild(clone);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // 打包提交所有上传内容
+        document.getElementById("submit-all").addEventListener("click", () => {
+            const cards = document.querySelectorAll("#upload-preview > .upload-card");
+            
+            if (cards.length === 0) {
+                alert("请先选择照片上传");
+                return;
+            }
+            
+            const results = [];
+
+            cards.forEach(card => {
+                const src = card.querySelector("img").src;
+                const tags = Array.from(card.querySelectorAll(".tag-item.active")).map(tag => tag.dataset.value);
+                const customTag = card.querySelector("input[type='text']").value.trim();
+                
+                if (customTag) {
+                    // 分割多个自定义标签
+                    const customTags = customTag.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    tags.push(...customTags);
+                }
+                
+                results.push({ 
+                    image: src, 
+                    tags: tags,
+                    title: "用户上传照片",
+                    description: "",
+                    likes: 0,
+                    date: new Date(),
+                    category: "用户上传"
+                });
+            });
+
+            // 添加到数据库
+            results.forEach(photo => {
+                photoDatabase.push({
+                    id: Date.now(), // 生成唯一ID
+                    url: photo.image,
+                    title: photo.title,
+                    description: photo.description,
+                    tags: photo.tags,
+                    likes: photo.likes,
+                    date: photo.date,
+                    category: photo.category
+                });
+            });
+            
+            // 保存到本地存储
+            localStorage.setItem('photoDatabase', JSON.stringify(photoDatabase));
+            
+            // 显示成功动画
+            const submitBtn = document.getElementById("submit-all");
+            submitBtn.innerHTML = '<iconify-icon icon="ph:check" class="text-xl mr-2"></iconify-icon>提交成功';
+            submitBtn.classList.remove('bg-gradient-to-r', 'from-neonPink', 'to-iceBlue');
+            submitBtn.classList.add('bg-green-500');
+            
+            setTimeout(() => {
+                submitBtn.innerHTML = '<iconify-icon icon="ph:paper-plane-tilt" class="text-xl mr-2"></iconify-icon>提交全部照片';
+                submitBtn.classList.remove('bg-green-500');
+                submitBtn.classList.add('bg-gradient-to-r', 'from-neonPink', 'to-iceBlue');
+                
+                // 清空上传区域
+                document.getElementById("upload-preview").innerHTML = "";
+                
+                // 刷新照片墙
+                renderPhotos();
+            }, 2000);
+        });
+        
+        // 渲染照片到照片墙
+        function renderPhotos() {
+            const photoGrid = document.getElementById('photo-grid');
+            photoGrid.innerHTML = '';
+            
+            // 筛选照片
+            let photosToShow = [...photoDatabase];
+            
+            // 按标签筛选
+            if (currentTag) {
+                photosToShow = photosToShow.filter(photo => 
+                    photo.tags.includes(currentTag)
+                );
+            }
+            
+            // 排序
+            if (currentSort === 'new') {
+                photosToShow.sort((a, b) => b.date - a.date);
+            } else {
+                photosToShow.sort((a, b) => b.likes - a.likes);
+            }
+            
+            // 限制显示数量
+            const photos = photosToShow.slice(0, visiblePhotos);
+            
+            if (photos.length === 0) {
+                photoGrid.innerHTML = `
+                    <div class="no-results">
+                        <iconify-icon icon="ph:smiley-sad" class="text-3xl mb-3"></iconify-icon>
+                        <div>未查询到"${currentTag}"这个标签哦宝宝</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 创建照片卡片
+            photos.forEach(photo => {
+                const card = document.createElement('div');
+                card.className = 'photo-card rounded-2xl overflow-hidden relative group';
+                card.innerHTML = `
+                    <img src="${photo.url}" alt="${photo.title}" class="w-full h-80 object-cover">
+                    <div class="photo-overlay absolute inset-0 p-5 flex flex-col justify-end">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <h3 class="font-bold text-xl">${photo.title}</h3>
+                                <p class="text-gray-300 text-sm mt-1">${photo.description}</p>
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    ${photo.tags.map(tag => 
+                                        `<span class="text-xs bg-white/10 px-2 py-1 rounded">#${tag}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                            <button class="glass rounded-full p-2 hover:bg-neonPink transition-colors like-btn" data-id="${photo.id}">
+                                <iconify-icon icon="ph:heart" class="text-2xl"></iconify-icon>
+                                <span class="absolute text-xs -bottom-1 -right-1 bg-neonPink rounded-full w-5 h-5 flex items-center justify-center">${photo.likes}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                photoGrid.appendChild(card);
+            });
+            
+            // 添加点赞事件监听
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseInt(btn.dataset.id);
+                    const photo = photoDatabase.find(p => p.id === id);
+                    if (photo) {
+                        photo.likes++;
+                        localStorage.setItem('photoDatabase', JSON.stringify(photoDatabase));
+                        renderPhotos();
+                    }
+                });
+            });
+        }
+        
+        // 搜索功能
+        document.getElementById('search-btn').addEventListener('click', () => {
+            const searchTerm = document.getElementById('search-input').value.trim();
+            if (searchTerm) {
+                currentTag = searchTerm;
+                renderPhotos();
+            }
+        });
+        
+        // 标签筛选按钮
+        document.querySelectorAll('.tag-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 移除所有活动状态
+                document.querySelectorAll('.tag-filter-btn').forEach(b => {
+                    b.classList.remove('active');
+                });
+                
+                // 设置当前活动状态
+                btn.classList.add('active');
+                
+                // 设置当前标签
+                currentTag = btn.dataset.tag;
+                
+                // 渲染照片
+                renderPhotos();
+            });
+        });
+        
+        // 排序按钮
+        document.getElementById('sort-new').addEventListener('click', () => {
+            currentSort = 'new';
+            renderPhotos();
+        });
+        
+        document.getElementById('sort-popular').addEventListener('click', () => {
+            currentSort = 'popular';
+            renderPhotos();
+        });
+        
+        // 加载更多按钮
+        document.getElementById('load-more').addEventListener('click', () => {
+            visiblePhotos += 6;
+            renderPhotos();
+        });
+        
+        // 初始化页面时渲染照片
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPhotos();
+        });
+    </script>
 </body>
 </html>
