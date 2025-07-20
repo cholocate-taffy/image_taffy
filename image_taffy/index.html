@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>梦幻光影照片库 - 开放式照片墙</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        /* 样式代码请参考前述示例 */
+    </style>
+</head>
+<body class="dark">
+    <!-- Particle background canvas -->
+    <canvas id="particle-canvas"></canvas>
+    <!-- 主容器 -->
+    <div class="container mx-auto px-6 max-w-7xl pt-6 pb-12">
+        <!-- 页面内容，如导航栏、上传区、照片展示区等 -->
+    </div>
+    
+    <!-- JavaScript 部分 -->
+    <script>
+        // 初始化照片数据库（从 LocalStorage 加载或使用初始数据）
+        let photoDatabase = JSON.parse(localStorage.getItem('photoDatabase')) || [];
+
+        // 上传、标签选择、搜索、点赞等功能
+        document.getElementById("multi-upload").addEventListener("change", function () {
+            // 上传逻辑，保存照片到 photoDatabase
+        });
+
+        document.getElementById("submit-all").addEventListener("click", function() {
+            // 提交所有上传的照片到数据库（LocalStorage）
+            localStorage.setItem('photoDatabase', JSON.stringify(photoDatabase));
+        });
+
+        // 搜索功能
+        document.getElementById('search-btn').addEventListener('click', () => {
+            const searchTerm = document.getElementById('search-input').value.trim();
+            if (searchTerm) {
+                currentTag = searchTerm;
+                renderPhotos();
+            }
+        });
+
+        // 渲染照片到页面
+        function renderPhotos() {
+            const photoGrid = document.getElementById('photo-grid');
+            photoGrid.innerHTML = '';
+            let photosToShow = [...photoDatabase];
+
+            // 按标签筛选
+            if (currentTag) {
+                photosToShow = photosToShow.filter(photo => 
+                    photo.tags.includes(currentTag)
+                );
+            }
+
+            photosToShow.forEach(photo => {
+                const card = document.createElement('div');
+                card.className = 'photo-card';
+                card.innerHTML = `
+                    <img src="${photo.url}" alt="${photo.title}" class="w-full h-80 object-cover">
+                    <div class="photo-overlay">
+                        <h3 class="font-bold">${photo.title}</h3>
+                        <p>${photo.description}</p>
+                        <div>${photo.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
+                    </div>
+                `;
+                photoGrid.appendChild(card);
+            });
+        }
+
+        // 初始化页面时加载所有照片
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPhotos();
+        });
+    </script>
+</body>
+</html>
